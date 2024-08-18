@@ -6,13 +6,12 @@ const ContentScript = () => {
   const [editorContent, setEditorContent] = useState("");
 
   useEffect(() => {
-    console.log("Injecting script");
     function injectScript() {
       const script = document.createElement("script");
       script.src = browser.runtime.getURL("src/injected.js");
       script.onload = function () {
         console.log("Injected script loaded successfully");
-        this.remove();
+        // this.remove();
       };
       script.onerror = function () {
         console.error("Failed to load the injected script");
@@ -21,16 +20,22 @@ const ContentScript = () => {
     }
     injectScript();
 
-    // Listen for messages from the injected script
-    window.addEventListener("message", (event) => {
-      if (event.data.type === "FROM_PAGE" && event.data.text) {
-        setEditorContent(event.data.text);
-      }
-    });
+    // Add event listener for the custom event
+    const handleContentChange = (event: CustomEvent<string>) => {
+      setEditorContent(event.detail);
+    };
 
-    // Cleanup listener on component unmount
+    window.addEventListener(
+      "codemirror-content-changed",
+      handleContentChange as EventListener
+    );
+
+    // Clean up the event listener when the component unmounts
     return () => {
-      window.removeEventListener("message", () => {});
+      window.removeEventListener(
+        "codemirror-content-changed",
+        handleContentChange as EventListener
+      );
     };
   }, []);
 
