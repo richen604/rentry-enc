@@ -12,6 +12,9 @@ function generateManifest() {
     description: pkg.description,
     version: pkg.version,
     ...manifest,
+    background: isBrowserFirefox
+      ? { scripts: ["src/background.ts"] }
+      : { service_worker: "src/background.ts" },
   };
 }
 

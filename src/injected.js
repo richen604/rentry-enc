@@ -42,7 +42,6 @@ import CodeMirror from "codemirror";
       case "SUBMIT_EDITOR_CONTENT": {
         const content = event.data.content;
 
-        console.log("SUBMIT_EDITOR_CONTENT", content);
 
         editor.setValue(content);
         // submit the content to the server

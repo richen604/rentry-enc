@@ -60,6 +60,7 @@ const ContentScript = () => {
   const [previewEncrypted, setPreviewEncrypted] = useState(false);
   const newSubmitButtonRef = useRef<HTMLButtonElement>(null);
   const passwordRef = useRef(password);
+  const decryptButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     passwordRef.current = password;
@@ -104,17 +105,21 @@ const ContentScript = () => {
   };
 
   const submitEditorContent = async () => {
-    console.log("submitEditorContent");
-
     const content = await getEditorContent();
 
-    console.log(content);
-    console.log(passwordRef.current);
     const encryptedContent = await encrypt(content, passwordRef.current);
     window.postMessage(
       { type: "SUBMIT_EDITOR_CONTENT", content: encryptedContent },
       "*"
     );
+  };
+
+  const decryptEditorContent = async () => {
+    const content = await getEditorContent();
+    console.log("Encrypted content:", content);
+    const decryptedContent = await decrypt(content, passwordRef.current);
+    console.log("Decrypted content:", decryptedContent);
+    setEditorContent(decryptedContent);
   };
 
   useEffect(() => {
@@ -126,19 +131,39 @@ const ContentScript = () => {
     injectScript();
 
     // there is a button with id "submitButton" that is used to submit the editor content, we are going to hide the button and add a new one with the same styles
-    const submitButton = document.getElementById("submitButton");
-    if (!submitButton) throw new Error("No submit button found");
-
-    if (!newSubmitButtonRef.current) return;
-    newSubmitButtonRef.current.type = "button";
-    newSubmitButtonRef.current.style.display = submitButton.style.display;
-    newSubmitButtonRef.current.innerHTML = submitButton.innerHTML;
-    submitButton.parentNode?.appendChild(newSubmitButtonRef.current);
-
-    submitButton.style.display = "none";
 
     if (newSubmitButtonRef.current) {
-      newSubmitButtonRef.current.addEventListener("click", submitEditorContent);
+      const submitButton = document.getElementById("submitButton");
+      if (submitButton) {
+        newSubmitButtonRef.current.id = "my-submit-button";
+        newSubmitButtonRef.current.type = "button";
+        newSubmitButtonRef.current.style.display = submitButton?.style
+          .display as string;
+        newSubmitButtonRef.current.innerHTML =
+          submitButton?.innerHTML as string;
+        submitButton?.parentNode?.appendChild(newSubmitButtonRef.current);
+        newSubmitButtonRef.current.addEventListener(
+          "click",
+          submitEditorContent
+        );
+        submitButton.style.display = "none";
+      }
+    }
+
+    // Ensure the decrypt button is properly initialized
+    if (decryptButtonRef.current) {
+      /// get edit button with inner html of "Edit"
+      const editButton = document.querySelector("a[href*='/edit']");
+
+      if (editButton) {
+        decryptButtonRef.current.id = "my-decrypt-button";
+        decryptButtonRef.current.type = "button";
+        editButton?.parentNode?.appendChild(decryptButtonRef.current);
+        decryptButtonRef.current.addEventListener(
+          "click",
+          decryptEditorContent
+        );
+      }
     }
 
     const banner = document.createElement("div");
@@ -147,7 +172,7 @@ const ContentScript = () => {
     banner.style.justifyContent = "space-between";
     banner.style.alignItems = "center";
     banner.style.padding = "0 1rem";
-  }, []);
+  }, [newSubmitButtonRef, decryptButtonRef]);
 
   return (
     <>
@@ -161,9 +186,17 @@ const ContentScript = () => {
         ref={newSubmitButtonRef}
         id="my-submit-button"
         disabled={password === ""}
+        onClick={submitEditorContent}
         style={{ display: "none" }}
       >
         Go
+      </button>
+      <button
+        ref={decryptButtonRef}
+        onClick={decryptEditorContent}
+        id="my-decrypt-button"
+      >
+        Decrypt
       </button>
     </>
   );
