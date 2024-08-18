@@ -13,15 +13,24 @@
   "action": {
     "default_popup": "src/popup.html"
   },
+
   "background": {
-    "service_worker": "src/background.ts"
+    "service_worker": "src/background.ts",
+    "type": "module"
   },
-  "permissions": ["activeTab", "storage"],
+  "permissions": ["activeTab", "tabs", "storage", "scripting"],
   "host_permissions": ["https://rentry.co/*"],
   "content_scripts": [
     {
       "matches": ["https://rentry.co/*"],
-      "js": ["src/content.tsx"]
+      "js": ["src/content.tsx"],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["src/injected.js", "src/content.tsx", "src/encrypt.ts"],
+      "matches": ["https://rentry.co/*"]
     }
   ]
 }
