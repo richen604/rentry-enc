@@ -7,7 +7,8 @@
     "dev": "vite",
     "dev:firefox": "BROWSER=firefox vite --mode firefox",
     "build": "tsc && vite build",
-    "build:firefox": "BROWSER=firefox tsc && vite build --mode firefox"
+    "build:firefox": "BROWSER=firefox tsc && vite build --mode firefox",
+    "prod:build": "web-ext build --source-dir ./src/ --overwrite-dest"
   },
   "dependencies": {
     "codemirror": "^5.65.17",
