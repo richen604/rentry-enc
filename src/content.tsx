@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import ReactDOM from "react-dom/client";
 import browser from "webextension-polyfill";
 import { decrypt, encrypt } from "./enc";
@@ -58,6 +58,12 @@ const Banner = ({
 const ContentScript = () => {
   const [password, setPassword] = useState("");
   const [previewEncrypted, setPreviewEncrypted] = useState(false);
+  const newSubmitButtonRef = useRef<HTMLButtonElement>(null);
+  const passwordRef = useRef(password);
+
+  useEffect(() => {
+    passwordRef.current = password;
+  }, [password]);
 
   const togglePreview = useCallback(async () => {
     setPreviewEncrypted((prevState) => {
@@ -65,7 +71,7 @@ const ContentScript = () => {
 
       if (newPreviewState) {
         getEditorContent().then((content) => {
-          encrypt(content, password).then((encrypted) => {
+          encrypt(content, passwordRef.current).then((encrypted) => {
             setEditorContent(encrypted);
           });
         });
@@ -75,7 +81,7 @@ const ContentScript = () => {
 
       return newPreviewState;
     });
-  }, [password]);
+  }, []);
 
   const getEditorContent = (): Promise<string> => {
     return new Promise((resolve) => {
@@ -97,6 +103,20 @@ const ContentScript = () => {
     window.postMessage({ type: "RESTORE_ORIGINAL_CONTENT" }, "*");
   };
 
+  const submitEditorContent = async () => {
+    console.log("submitEditorContent");
+
+    const content = await getEditorContent();
+
+    console.log(content);
+    console.log(passwordRef.current);
+    const encryptedContent = await encrypt(content, passwordRef.current);
+    window.postMessage(
+      { type: "SUBMIT_EDITOR_CONTENT", content: encryptedContent },
+      "*"
+    );
+  };
+
   useEffect(() => {
     function injectScript() {
       const script = document.createElement("script");
@@ -104,6 +124,22 @@ const ContentScript = () => {
       (document.head || document.documentElement).appendChild(script);
     }
     injectScript();
+
+    // there is a button with id "submitButton" that is used to submit the editor content, we are going to hide the button and add a new one with the same styles
+    const submitButton = document.getElementById("submitButton");
+    if (!submitButton) throw new Error("No submit button found");
+
+    if (!newSubmitButtonRef.current) return;
+    newSubmitButtonRef.current.type = "button";
+    newSubmitButtonRef.current.style.display = submitButton.style.display;
+    newSubmitButtonRef.current.innerHTML = submitButton.innerHTML;
+    submitButton.parentNode?.appendChild(newSubmitButtonRef.current);
+
+    submitButton.style.display = "none";
+
+    if (newSubmitButtonRef.current) {
+      newSubmitButtonRef.current.addEventListener("click", submitEditorContent);
+    }
 
     const banner = document.createElement("div");
     banner.id = "rentry-encryptor-banner";
@@ -114,12 +150,22 @@ const ContentScript = () => {
   }, []);
 
   return (
-    <Banner
-      password={password}
-      setPassword={setPassword}
-      previewEncrypted={previewEncrypted}
-      togglePreview={togglePreview}
-    />
+    <>
+      <Banner
+        password={password}
+        setPassword={setPassword}
+        previewEncrypted={previewEncrypted}
+        togglePreview={togglePreview}
+      />
+      <button
+        ref={newSubmitButtonRef}
+        id="my-submit-button"
+        disabled={password === ""}
+        style={{ display: "none" }}
+      >
+        Go
+      </button>
+    </>
   );
 };
 

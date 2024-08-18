@@ -4,6 +4,7 @@
 [x] create encryption/decryption functions
 [x] find codemirror context
 [x] created preview of encrypted state
+[x] monkey patch submit button
 [] create button and function for "edit code" generation, autofill
 [] create button and function for "custom url" generation, autofill
 [] implement storage of url and edit code
