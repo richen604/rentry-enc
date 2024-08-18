@@ -6,54 +6,36 @@ import CodeMirror from "codemirror";
 (function () {
   console.log("Injected script loaded");
 
-    /** @type {HTMLElement|null} */
-    const element = document.querySelector(".CodeMirror");
-    if (!element) return undefined;
+  const element = document.querySelector(".CodeMirror");
+  if (!element) return;
 
-    /** @type {Editor|undefined} */
-    const editor = element.CodeMirror;
-    console.log("Original Editor:", editor);
+  const editor = element.CodeMirror;
+  if (!editor) throw new Error("No editor found")
 
-    // Create a new textarea element for the cloned editor
-    const clonedTextarea = document.createElement("textarea");
-    document.body.appendChild(clonedTextarea);
 
-    // Create a new CodeMirror instance with the same options as the original
-    const clonedEditor = CodeMirror.fromTextArea(clonedTextarea, editor.options);
-    
-    // Set the initial value of the cloned editor
-    clonedEditor.setValue(editor.getValue());
+  const STORAGE_KEY = 'originalEditorContent';
 
-    // hide the cloned editor
-    clonedEditor.getWrapperElement().style.display = "none";
 
-    // Set up event listeners to sync changes between editors
-    editor.on("change", (instance, changeObj) => {
-      if (changeObj.origin !== "cloned") {
-        clonedEditor.replaceRange(changeObj.text, changeObj.from, changeObj.to, "original");
-      }
-    });
 
-    clonedEditor.on("change", (instance, changeObj) => {
-      if (changeObj.origin !== "original") {
-        editor.replaceRange(changeObj.text, changeObj.from, changeObj.to, "cloned");
-      }
-    });
-
-    console.log("Cloned Editor:", clonedEditor);
-
-    // Create a MutationObserver to watch for changes
-    const observer = new MutationObserver(() => {
-      const content = editor.getValue();
-      window.dispatchEvent(new CustomEvent('codemirror-content-changed', { detail: content }));
-    });
-
-    // Observe the CodeMirror-lines element for changes
-    const lines = element.querySelector('.CodeMirror-lines');
-    if (lines) {
-      observer.observe(lines, { childList: true, subtree: true, characterData: true });
+  window.addEventListener("message", (event) => {
+    switch (event.data.type) {
+      case "GET_EDITOR_CONTENT":
+        const content = localStorage.getItem(STORAGE_KEY) || editor.getValue();
+        window.postMessage({ type: "EDITOR_CONTENT", content }, "*");
+        break;
+      case "SET_EDITOR_CONTENT":
+        if (!localStorage.getItem(STORAGE_KEY)) {
+          localStorage.setItem(STORAGE_KEY, editor.getValue());
+        }
+        editor.setValue(event.data.content);
+        break;
+      case "RESTORE_ORIGINAL_CONTENT":
+        const originalContent = localStorage.getItem(STORAGE_KEY);
+        if (originalContent) {
+          editor.setValue(originalContent);
+          localStorage.removeItem(STORAGE_KEY);
+        }
+        break;
     }
-
-    return editor;
-  
+  });
 })();
